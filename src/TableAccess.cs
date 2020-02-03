@@ -160,13 +160,14 @@ namespace Gobie74.AzureStorage
 
                 TableResult deleteResult = await this.CloudTable.ExecuteAsync(deleteOperation);
 
-                if (deleteResult.HttpStatusCode == 200)
+                if (deleteResult.HttpStatusCode >= 200 && deleteResult.HttpStatusCode < 300)
                 {
+                    this.logger.LogTrace($"The returned status was {deleteResult.HttpStatusCode}");
                     return;
                 }
                 else
                 {
-                    throw new StorageException();
+                    throw new StorageException($"Error code {deleteResult.HttpStatusCode}");
                 }
             }
         }
