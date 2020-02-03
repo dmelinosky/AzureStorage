@@ -162,7 +162,7 @@ namespace Gobie74.AzureStorage
 
                 if (deleteResult.HttpStatusCode >= 200 && deleteResult.HttpStatusCode < 300)
                 {
-                    this.logger.LogTrace($"The returned status was {deleteResult.HttpStatusCode}");
+                    this.logger?.LogTrace($"The returned status was {deleteResult.HttpStatusCode}");
                     return;
                 }
                 else
