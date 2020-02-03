@@ -39,3 +39,8 @@ steps:
     nobuild: true
     versioningScheme: 'off'
     verbosityPack: 'Normal'
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    ArtifactName: 'drop'
+    publishLocation: 'Container'
