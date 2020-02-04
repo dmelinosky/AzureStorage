@@ -18,7 +18,7 @@ namespace Gobie74.AzureStorage
         where T : class, ITableEntity
     {
         /// <summary> Logging provider. </summary>
-        private readonly ILogger logger;
+        private readonly ILogger<TableAccess<T>> logger;
 
         /// <summary> To detect redundant calls. </summary>
         private bool disposedValue = false;
@@ -41,9 +41,11 @@ namespace Gobie74.AzureStorage
         /// <param name="connectionString"> azure table connection string. </param>
         /// <param name="tableName"> table name to use for storage. </param>
         /// <param name="logger">A logger implemenation.</param>
-        public TableAccess(string connectionString, string tableName, ILogger logger = null)
+        public TableAccess(string connectionString, string tableName, ILogger<TableAccess<T>> logger = null)
         {
             this.logger = logger;
+
+            this.logger?.LogTrace("Constructor");
 
             this.cloudStorageAccount = CloudStorageAccount.Parse(connectionString);
             this.cloudTableClient = this.cloudStorageAccount.CreateCloudTableClient();

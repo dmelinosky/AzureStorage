@@ -11,7 +11,7 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Description>Azure Table Storage helper library</Description>
     <PackageProjectUrl>https://github.com/dmelinosky/AzureStorage</PackageProjectUrl>  
-    <Version>1.0.2</Version>
+    <Version>1.0.3</Version>
     <Owners>Gobie74</Owners>
     <PackageReleaseNotes>Fix error in delete, part deux</PackageReleaseNotes>
   </PropertyGroup>
