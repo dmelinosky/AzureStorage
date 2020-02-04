@@ -45,10 +45,11 @@ Update an entity's properties and then call the `InsertOrReplaceAsync` method.
 
 #### Example
 
+```c#
             aThing.Name = "Hello World";
 
             await tableAccess.InsertOrReplaceAsync(aThing);
-
+```
 
 ### Deleting Data
 
