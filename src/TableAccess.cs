@@ -6,9 +6,8 @@ namespace Gobie74.AzureStorage
 {
     using System;
     using System.Threading.Tasks;
+    using Microsoft.Azure.Cosmos.Table;
     using Microsoft.Extensions.Logging;
-    using Microsoft.WindowsAzure.Storage;
-    using Microsoft.WindowsAzure.Storage.Table;
 
     /// <summary>
     /// Generic wrapper for Azure Table access.
@@ -69,12 +68,14 @@ namespace Gobie74.AzureStorage
         /// Add an entity.
         /// </summary>
         /// <param name="entity"> the entity to add. </param>
-        /// <returns>true if success, false if failure.</returns>
+        /// <returns>A task.</returns>
+        /// <exception cref="StorageException">Thrown if a non success code is returned from table storage addition.</exception>
         public virtual async Task AddAsync(T entity)
         {
             if (entity == null)
             {
-                throw new ArgumentNullException(nameof(entity));
+                this.logger?.LogWarning("Null value passed as insertion parameter, returning early.");
+                return;
             }
 
             await this.CreateIfNotExists();
@@ -85,7 +86,16 @@ namespace Gobie74.AzureStorage
 
             TableResult result = await this.CloudTable.ExecuteAsync(insertOperation);
 
-            this.logger?.LogTrace($"Return code is {result.HttpStatusCode}");
+            if (result.HttpStatusCode >= 200 && result.HttpStatusCode < 300)
+            {
+                this.logger?.LogTrace($"Return code is {result.HttpStatusCode}");
+            }
+            else
+            {
+                string message = $"HttpStatusCode returned is {result.HttpStatusCode}";
+                this.logger?.LogError(message);
+                throw new StorageException(message);
+            }
         }
 
         /// <summary>
@@ -126,29 +136,49 @@ namespace Gobie74.AzureStorage
         /// Insert or Replace an entity.
         /// </summary>
         /// <param name="entity"> the entity to insert or replace. </param>
-        /// <returns>A TableResult containing information about the operation. </returns>
+        /// <returns>A task.</returns>
+        /// <exception cref="StorageException">Thrown if a non success code is returned from table storage insertion or update.</exception>
         public virtual async Task InsertOrReplaceAsync(T entity)
         {
+            if (entity == null)
+            {
+                this.logger?.LogWarning("Null value passed as insert or update parameter, returning early.");
+                return;
+            }
+
             await this.CreateIfNotExists();
 
             TableOperation insertOrReplaceOperation = TableOperation.InsertOrReplace(entity);
 
             TableResult result = await this.CloudTable.ExecuteAsync(insertOrReplaceOperation);
+
+            if (result.HttpStatusCode >= 200 && result.HttpStatusCode < 300)
+            {
+                this.logger?.LogTrace($"Return code is {result.HttpStatusCode}");
+            }
+            else
+            {
+                string message = $"HttpStatusCode returned is {result.HttpStatusCode}";
+                this.logger?.LogError(message);
+                throw new StorageException(message);
+            }
         }
 
         /// <summary>
         /// Delete an entity.
         /// </summary>
         /// <param name="entity"> the entity to delete. </param>
-        /// <returns>A table result. </returns>
+        /// <returns>A task.</returns>
+        /// <exception cref="StorageException">Thrown if a non success code is returned from deleting the entity from the table.</exception>
         public virtual async Task DeleteAsync(T entity)
         {
-            await this.CreateIfNotExists();
-
             if (entity == null)
             {
+                this.logger?.LogWarning("Null value passed as delete parameter, returning early.");
                 return;
             }
+
+            await this.CreateIfNotExists();
 
             TableOperation retrieveOperation = TableOperation.Retrieve<T>(entity.PartitionKey, entity.RowKey);
 
@@ -169,7 +199,9 @@ namespace Gobie74.AzureStorage
                 }
                 else
                 {
-                    throw new StorageException($"Error code {deleteResult.HttpStatusCode}");
+                    string message = $"Error code {deleteResult.HttpStatusCode}";
+                    this.logger?.LogError(message);
+                    throw new StorageException(message);
                 }
             }
         }
@@ -199,7 +231,7 @@ namespace Gobie74.AzureStorage
         /// Create the table if it doesn't already exist.
         /// </summary>
         /// <returns>A task. </returns>
-        protected async Task CreateIfNotExists()
+        protected virtual async Task CreateIfNotExists()
         {
             bool exists = await this.CloudTable.ExistsAsync();
 
