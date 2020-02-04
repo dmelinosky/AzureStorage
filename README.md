@@ -78,3 +78,7 @@ To Query for an entity, supply the partition key and row key to the `GetSingleAs
 ## Status
 
 [![Build status](https://dev.azure.com/gobie74/github/_apis/build/status/dmelinosky.AzureStorage)](https://dev.azure.com/gobie74/github/_build/latest?definitionId=15)
+
+[![gobie74.azurestorage package in packageSource feed in Azure Artifacts](https://feeds.dev.azure.com/gobie74/_apis/public/Packaging/Feeds/8bd63402-db7d-41c2-ad0f-21c6b6106e0b/Packages/0b0cfcf4-272c-40dd-8398-898da22b1085/Badge)](https://dev.azure.com/gobie74/github/_packaging?_a=package&feed=8bd63402-db7d-41c2-ad0f-21c6b6106e0b&package=0b0cfcf4-272c-40dd-8398-898da22b1085&preferRelease=true)
+
+[![nuget](https://img.shields.io/nuget/v/Gobie74.AzureStorage.svg)](https://github.com/dmelinosky/AzureStorage)
