@@ -37,6 +37,26 @@ namespace Gobie74.AzureStorage
         /// <summary>
         /// Initializes a new instance of the <see cref="TableAccess{T}"/> class.
         /// </summary>
+        /// <param name="table">the table to access.</param>
+        /// <param name="logger">An optional logger.</param>
+        public TableAccess(CloudTable table, ILogger<TableAccess<T>> logger = null)
+        {
+            if (table == null)
+            {
+                throw new ArgumentNullException(nameof(table));
+            }
+
+            this.logger = logger;
+
+            this.logger?.LogTrace("Table access logging is available.");
+
+            this.CloudTable = table;
+            this.tableName = table.Name;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TableAccess{T}"/> class.
+        /// </summary>
         /// <param name="connectionString"> azure table connection string. </param>
         /// <param name="tableName"> table name to use for storage. </param>
         /// <param name="logger">A logger implemenation.</param>
@@ -44,7 +64,7 @@ namespace Gobie74.AzureStorage
         {
             this.logger = logger;
 
-            this.logger?.LogTrace("Constructor");
+            this.logger?.LogTrace("Table access logging is available.");
 
             this.cloudStorageAccount = CloudStorageAccount.Parse(connectionString);
             this.cloudTableClient = this.cloudStorageAccount.CreateCloudTableClient();
