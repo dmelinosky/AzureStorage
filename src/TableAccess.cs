@@ -14,7 +14,7 @@ namespace Gobie74.AzureStorage
     /// </summary>
     /// <typeparam name="T">the type to access from the table.</typeparam>
     public class TableAccess<T> : IDisposable, ITableAccess<T>
-        where T : class, ITableEntity
+        where T : class, ITableEntity, new()
     {
         /// <summary> Logging provider. </summary>
         private readonly ILogger<TableAccess<T>> logger;
@@ -204,6 +204,42 @@ namespace Gobie74.AzureStorage
                     throw new StorageException(message);
                 }
             }
+        }
+
+        /// <summary>
+        /// Find the first row that has a given property value.
+        /// </summary>
+        /// <param name="rowKey">the row key.</param>
+        /// <param name="propertyName">the property to search on.</param>
+        /// <param name="propertyValue">the value of the property.</param>
+        /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
+        public virtual async Task<T> FindFirstRowWithProperty(string rowKey, string propertyName, string propertyValue)
+        {
+            if (string.IsNullOrWhiteSpace(rowKey) || string.IsNullOrWhiteSpace(propertyName) || string.IsNullOrWhiteSpace(propertyValue))
+            {
+                return null;
+            }
+
+            await this.CreateIfNotExists();
+
+            var filter = TableQuery.CombineFilters(
+                TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, rowKey),
+                TableOperators.And,
+                TableQuery.GenerateFilterCondition(propertyName, QueryComparisons.Equal, propertyValue));
+
+            TableQuery<T> query = new TableQuery<T>().Where(filter);
+
+            var stuffs = await this.CloudTable.ExecuteQuerySegmentedAsync<T>(query, new TableContinuationToken());
+
+            T found = null;
+
+            foreach (T thing in stuffs.Results)
+            {
+                found = thing;
+                break;
+            }
+
+            return found;
         }
 
         /// <summary>

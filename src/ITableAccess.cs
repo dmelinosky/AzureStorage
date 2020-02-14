@@ -42,5 +42,14 @@ namespace Gobie74.AzureStorage
         /// <param name="entity">The entity to insert or replace.</param>
         /// <returns>A table result.</returns>
         Task InsertOrReplaceAsync(T entity);
+
+        /// <summary>
+        /// Find the first row that has a given property value.
+        /// </summary>
+        /// <param name="rowKey">the row key.</param>
+        /// <param name="propertyName">the property to search on.</param>
+        /// <param name="propertyValue">the value of the property.</param>
+        /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
+        Task<T> FindFirstRowWithProperty(string rowKey, string propertyName, string propertyValue);
     }
 }
