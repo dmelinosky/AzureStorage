@@ -54,6 +54,105 @@ namespace Gobie74.AzureStorage.Tests
 
             // Assert
             Assert.NotNull(getIt);
+            Assert.Equal("Findable with get single", getIt.Name);
+        }
+
+        /// <summary>
+        /// Should be able to delete an entity without throwing.
+        /// </summary>
+        /// <returns>A task.</returns>
+        [Fact]
+        public async Task CanDeleteSpecificEntity()
+        {
+            // Arrange
+            TestEntity deletable = await this.sut.GetSingleAsync("test", "delete");
+
+            bool threw = false;
+
+            // Act
+            try
+            {
+                await this.sut.DeleteAsync(deletable);
+            }
+            catch (StorageException)
+            {
+                threw = true;
+            }
+            catch (Exception)
+            {
+                threw = true;
+            }
+
+            // Assert
+            Assert.False(threw);
+        }
+
+        /// <summary>
+        /// Can insert an entity.
+        /// </summary>
+        /// <returns>A task.</returns>
+        [Fact]
+        public async Task CanInsertWithoutThrowing()
+        {
+            // Arrange
+            TestEntity insertable = new TestEntity { PartitionKey = "test", RowKey = "inserted", Name = "This was inserted" };
+            bool threw = false;
+            TestEntity verify = null;
+
+            // Act
+            try
+            {
+                await this.sut.AddAsync(insertable);
+
+                verify = await this.sut.GetSingleAsync("test", "inserted");
+            }
+            catch (StorageException)
+            {
+                threw = true;
+            }
+            catch (Exception)
+            {
+                threw = true;
+            }
+
+            // Assert
+            Assert.False(threw);
+            Assert.NotNull(verify);
+            Assert.Equal("This was inserted", verify.Name);
+        }
+
+        /// <summary>
+        /// Should be able to find via a property.
+        /// </summary>
+        /// <returns>A task.</returns>
+        [Fact]
+        public async Task CanFindByProperty()
+        {
+            // Arrange
+            string targetProperty = "Name";
+            string targetValue = "Findable with get single";
+            string targetRow = "query1";
+            TestEntity foundItem = null;
+            bool threw = false;
+
+            // Act
+            try
+            {
+                foundItem = await this.sut.FindFirstRowWithProperty(targetRow, targetProperty, targetValue);
+            }
+            catch (NotFoundException)
+            {
+                threw = true;
+            }
+            catch (StorageException)
+            {
+                threw = true;
+            }
+
+            // Assert
+            Assert.False(threw);
+            Assert.NotNull(foundItem);
+            Assert.Equal("test", foundItem.PartitionKey);
         }
 
         /// <inheritdoc/>

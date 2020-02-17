@@ -7,6 +7,7 @@ namespace Gobie74.AzureStorage.Tests
     using System;
     using System.Threading.Tasks;
     using Microsoft.Azure.Cosmos.Table;
+    using Microsoft.Extensions.Configuration;
     using Xunit;
 
     /// <summary>
@@ -25,11 +26,17 @@ namespace Gobie74.AzureStorage.Tests
         /// Called immediately after the class has been created, before it is used.
         /// </summary>
         /// <returns>A task.</returns>
-        public Task InitializeAsync()
+        public async Task InitializeAsync()
         {
-            string accountName = string.Empty;
-            string secret = string.Empty;
-            string tableName = string.Empty;
+            var builder = new ConfigurationBuilder()
+                .AddUserSecrets(System.Reflection.Assembly.GetExecutingAssembly());
+
+            var config = builder.Build();
+
+            // these need to be read from elsewhere.
+            string accountName = config["AccountName"];
+            string secret = config["AccountKey"];
+            string tableName = "test";
 
             StorageCredentials storageCredentials = new StorageCredentials(accountName, secret);
             CloudStorageAccount account = new CloudStorageAccount(storageCredentials, true);
@@ -38,7 +45,21 @@ namespace Gobie74.AzureStorage.Tests
 
             this.testTable = client.GetTableReference(tableName);
 
-            return Task.CompletedTask;
+            await this.testTable.DeleteIfExistsAsync();
+
+            await this.testTable.CreateIfNotExistsAsync();
+
+            TestEntity findableEntity = new TestEntity { PartitionKey = "test", RowKey = "query1", Name = "Findable with get single" };
+
+            TableOperation insertOp = TableOperation.Insert(findableEntity);
+
+            await this.testTable.ExecuteAsync(insertOp);
+
+            TestEntity deletableEntity = new TestEntity { PartitionKey = "test", RowKey = "delete", Name = "Here to be deleted." };
+
+            insertOp = TableOperation.Insert(deletableEntity);
+
+            await this.testTable.ExecuteAsync(insertOp);
         }
 
         /// <summary>
@@ -46,11 +67,11 @@ namespace Gobie74.AzureStorage.Tests
         /// if the class also implements that.
         /// </summary>
         /// <returns>A task.</returns>
-        public Task DisposeAsync()
+        public async Task DisposeAsync()
         {
-            this.testTable = null;
+            await this.testTable.DeleteIfExistsAsync();
 
-            return Task.CompletedTask;
+            this.testTable = null;
         }
     }
 }
