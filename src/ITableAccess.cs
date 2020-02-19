@@ -4,6 +4,7 @@
 
 namespace Gobie74.AzureStorage
 {
+    using System.Collections.Generic;
     using System.Threading.Tasks;
     using Microsoft.Azure.Cosmos.Table;
 
@@ -18,14 +19,14 @@ namespace Gobie74.AzureStorage
         /// Add an entity.
         /// </summary>
         /// <param name="entity">The Entity to add.</param>
-        /// <returns>A table result.</returns>
+        /// <returns>A task.</returns>
         Task AddAsync(T entity);
 
         /// <summary>
         /// Delete an entity.
         /// </summary>
         /// <param name="entity">The entity to delete.</param>
-        /// <returns>A table result.</returns>
+        /// <returns>A task.</returns>
         Task DeleteAsync(T entity);
 
         /// <summary>
@@ -33,14 +34,14 @@ namespace Gobie74.AzureStorage
         /// </summary>
         /// <param name="partitionKey">The Partition key.</param>
         /// <param name="rowKey">The Row key.</param>
-        /// <returns>A table entity.</returns>
+        /// <returns>A task.</returns>
         Task<T> GetSingleAsync(string partitionKey, string rowKey);
 
         /// <summary>
         /// Insert or replace an entity.
         /// </summary>
         /// <param name="entity">The entity to insert or replace.</param>
-        /// <returns>A table result.</returns>
+        /// <returns>A task.</returns>
         Task InsertOrReplaceAsync(T entity);
 
         /// <summary>
@@ -51,5 +52,19 @@ namespace Gobie74.AzureStorage
         /// <param name="propertyValue">the value of the property.</param>
         /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
         Task<T> FindFirstRowWithProperty(string rowKey, string propertyName, string propertyValue);
+
+        /// <summary>
+        /// Find all the items with a given partition key.
+        /// </summary>
+        /// <param name="partitionKey">The partition key.</param>
+        /// <returns>A readonly collection of all the items in the partition.</returns>
+        Task<IReadOnlyCollection<T>> FindAllByPartitionKey(string partitionKey);
+
+        /// <summary>
+        /// Find all the items with a given row key.
+        /// </summary>
+        /// <param name="rowKey">The row key.</param>
+        /// <returns>A readonly collection of all the items with the given row key.</returns>
+        Task<IReadOnlyCollection<T>> FindAllByRowKey(string rowKey);
     }
 }

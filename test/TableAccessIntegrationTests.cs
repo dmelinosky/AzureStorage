@@ -5,6 +5,7 @@
 namespace Gobie74.AzureStorage.Tests
 {
     using System;
+    using System.Collections.Generic;
     using System.Threading.Tasks;
     using Xunit;
 
@@ -78,10 +79,6 @@ namespace Gobie74.AzureStorage.Tests
             {
                 threw = true;
             }
-            catch (Exception)
-            {
-                threw = true;
-            }
 
             // Assert
             Assert.False(threw);
@@ -107,10 +104,6 @@ namespace Gobie74.AzureStorage.Tests
                 verify = await this.sut.GetSingleAsync("test", "inserted");
             }
             catch (StorageException)
-            {
-                threw = true;
-            }
-            catch (Exception)
             {
                 threw = true;
             }
@@ -153,6 +146,60 @@ namespace Gobie74.AzureStorage.Tests
             Assert.False(threw);
             Assert.NotNull(foundItem);
             Assert.Equal("test", foundItem.PartitionKey);
+        }
+
+        /// <summary>
+        /// Can get a collection of items.
+        /// </summary>
+        /// <returns>A task.</returns>
+        [Fact]
+        public async Task CanGetCollectionOfItems()
+        {
+            // Arrange
+            IReadOnlyCollection<TestEntity> results = null;
+            bool threw = false;
+
+            // Act
+            try
+            {
+                results = await this.sut.FindAllByPartitionKey("list");
+            }
+            catch (StorageException)
+            {
+                threw = true;
+            }
+
+            // Assert
+            Assert.False(threw);
+            Assert.NotNull(results);
+            Assert.Equal(3, results.Count);
+        }
+
+        /// <summary>
+        /// Can get a collection of items with the same row key.
+        /// </summary>
+        /// <returns>A task.</returns>
+        [Fact]
+        public async Task CanGetCollectionByRowKey()
+        {
+            // Arrange
+            IReadOnlyCollection<TestEntity> results = null;
+            bool threw = false;
+
+            // Act
+            try
+            {
+                results = await this.sut.FindAllByRowKey("row");
+            }
+            catch (StorageException)
+            {
+                threw = true;
+            }
+
+            // Assert
+            Assert.False(threw);
+            Assert.NotNull(results);
+            Assert.Equal(2, results.Count);
         }
 
         /// <inheritdoc/>

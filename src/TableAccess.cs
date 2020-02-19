@@ -5,6 +5,8 @@
 namespace Gobie74.AzureStorage
 {
     using System;
+    using System.Collections.Generic;
+    using System.Collections.ObjectModel;
     using System.Threading.Tasks;
     using Microsoft.Azure.Cosmos.Table;
     using Microsoft.Extensions.Logging;
@@ -260,6 +262,72 @@ namespace Gobie74.AzureStorage
             }
 
             return found;
+        }
+
+        /// <summary>
+        /// Find all the items with a given partition key.
+        /// </summary>
+        /// <param name="partitionKey">The partition key.</param>
+        /// <returns>A readonly collection of all the items in the partition.</returns>
+        public async Task<IReadOnlyCollection<T>> FindAllByPartitionKey(string partitionKey)
+        {
+            if (string.IsNullOrWhiteSpace(partitionKey))
+            {
+                return new ReadOnlyCollection<T>(new List<T>());
+            }
+
+            await this.CreateIfNotExists();
+
+            string filter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, partitionKey);
+
+            TableQuery<T> query = new TableQuery<T>().Where(filter);
+
+            var continuationToken = default(TableContinuationToken);
+
+            List<T> results = new List<T>();
+
+            do
+            {
+                TableQuerySegment<T> segment = await this.CloudTable.ExecuteQuerySegmentedAsync<T>(query, continuationToken);
+                continuationToken = segment.ContinuationToken;
+                results.AddRange(segment.Results);
+            }
+            while (continuationToken != null);
+
+            return new ReadOnlyCollection<T>(results);
+        }
+
+        /// <summary>
+        /// Find all the items with a given row key.
+        /// </summary>
+        /// <param name="rowKey">The row key.</param>
+        /// <returns>A readonly collection of all the items with the given row key.</returns>
+        public async Task<IReadOnlyCollection<T>> FindAllByRowKey(string rowKey)
+        {
+            if (string.IsNullOrWhiteSpace(rowKey))
+            {
+                return new ReadOnlyCollection<T>(new List<T>());
+            }
+
+            await this.CreateIfNotExists();
+
+            string filter = TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, rowKey);
+
+            TableQuery<T> query = new TableQuery<T>().Where(filter);
+
+            var continuationToken = default(TableContinuationToken);
+
+            List<T> results = new List<T>();
+
+            do
+            {
+                TableQuerySegment<T> segment = await this.CloudTable.ExecuteQuerySegmentedAsync<T>(query, continuationToken);
+                continuationToken = segment.ContinuationToken;
+                results.AddRange(segment.Results);
+            }
+            while (continuationToken != null);
+
+            return new ReadOnlyCollection<T>(results);
         }
 
         /// <summary>

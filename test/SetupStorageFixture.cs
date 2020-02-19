@@ -60,6 +60,36 @@ namespace Gobie74.AzureStorage.Tests
             insertOp = TableOperation.Insert(deletableEntity);
 
             await this.testTable.ExecuteAsync(insertOp);
+
+            TestEntity list1 = new TestEntity { PartitionKey = "list", RowKey = "one", Name = "list one" };
+
+            insertOp = TableOperation.Insert(list1);
+
+            await this.testTable.ExecuteAsync(insertOp);
+
+            TestEntity list2 = new TestEntity { PartitionKey = "list", RowKey = "two", Name = "list two" };
+
+            insertOp = TableOperation.Insert(list2);
+
+            await this.testTable.ExecuteAsync(insertOp);
+
+            TestEntity list3 = new TestEntity { PartitionKey = "list", RowKey = "three", Name = "list three" };
+
+            insertOp = TableOperation.Insert(list3);
+
+            await this.testTable.ExecuteAsync(insertOp);
+
+            TestEntity row1 = new TestEntity { PartitionKey = "hello", RowKey = "row", Name = "row one" };
+
+            insertOp = TableOperation.Insert(row1);
+
+            await this.testTable.ExecuteAsync(insertOp);
+
+            TestEntity row2 = new TestEntity { PartitionKey = "there", RowKey = "row", Name = "row two" };
+
+            insertOp = TableOperation.Insert(row2);
+
+            await this.testTable.ExecuteAsync(insertOp);
         }
 
         /// <summary>
