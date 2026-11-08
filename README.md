@@ -94,7 +94,7 @@ docker run -p 10002:10002 mcr.microsoft.com/azure-storage/azurite azurite-table 
 
 ## Releasing
 
-Pushes to `master` (merged PRs) are published to [nuget.org](https://www.nuget.org/packages/gobie74.azurestorage/) by the `publish` job in `.github/workflows/build.yml`, using NuGet Trusted Publishing (no API key is stored in GitHub). To release, bump `<Version>` and `<PackageReleaseNotes>` in `src/Gobie74.AzureStorage.csproj` in your PR; merges that don't change the version are skipped.
+Pushes to `master` (merged PRs) are published to [nuget.org](https://www.nuget.org/packages/gobie74.azurestorage/) by the `publish` job in `.github/workflows/build.yml`, using NuGet Trusted Publishing (no API key is stored in GitHub). To release, bump `<Version>` and `<PackageReleaseNotes>` in `src/Gobie74.AzureStorage.csproj` in your PR; merges that don't change the version are skipped. Each published version also gets a `v<version>` tag and a GitHub release with the package attached.
 
 ---
 
