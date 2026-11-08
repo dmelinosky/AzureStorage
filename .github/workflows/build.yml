@@ -59,3 +59,37 @@ jobs:
           name: drop
           path: artifacts/
           if-no-files-found: warn
+
+  publish:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    environment: nuget
+    permissions:
+      id-token: write # request an OIDC token for NuGet Trusted Publishing
+      contents: read
+
+    steps:
+      - name: Download package
+        uses: actions/download-artifact@v5
+        with:
+          name: drop
+          path: artifacts
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: NuGet login (OIDC Trusted Publishing)
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: Gobie74
+
+      - name: Push to nuget.org
+        run: >
+          dotnet nuget push "artifacts/packages/*.nupkg"
+          --api-key ${{ steps.login.outputs.NUGET_API_KEY }}
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate
