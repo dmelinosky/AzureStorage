@@ -92,6 +92,10 @@ The tests are integration tests written with [TUnit](https://tunit.dev). They us
 docker run -p 10002:10002 mcr.microsoft.com/azure-storage/azurite azurite-table --tableHost 0.0.0.0
 ```
 
+## Releasing
+
+Pushes to `master` (merged PRs) are published to [nuget.org](https://www.nuget.org/packages/gobie74.azurestorage/) by the `publish` job in `.github/workflows/build.yml`, using NuGet Trusted Publishing (no API key is stored in GitHub). To release, bump `<Version>` and `<PackageReleaseNotes>` in `src/Gobie74.AzureStorage.csproj` in your PR; merges that don't change the version are skipped.
+
 ---
 
 ## Status
