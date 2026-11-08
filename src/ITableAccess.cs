@@ -6,7 +6,7 @@ namespace Gobie74.AzureStorage
 {
     using System.Collections.Generic;
     using System.Threading.Tasks;
-    using Microsoft.Azure.Cosmos.Table;
+    using Azure.Data.Tables;
 
     /// <summary>
     /// Interface to interact with Azure Table storage.

@@ -1,0 +1,17 @@
+<Project>
+
+  <PropertyGroup Label="Build">
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory).editorconfig" Link=".editorconfig" />
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory).stylecop.json" Link="stylecop.json" />
+  </ItemGroup>
+
+</Project>

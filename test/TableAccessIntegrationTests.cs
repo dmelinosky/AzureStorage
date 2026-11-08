@@ -7,15 +7,15 @@ namespace Gobie74.AzureStorage.Tests
     using System;
     using System.Collections.Generic;
     using System.Threading.Tasks;
-    using Xunit;
 
     /// <summary>
-    /// Integration tests for the <see cref="Gobie74.AzureStorage.TableAccess{T}"/> class.
+    /// Integration tests for the <see cref="TableAccess{T}"/> class.
     /// </summary>
-    public partial class TableAccessIntegrationTests : IClassFixture<SetupStorageFixture>, IDisposable
+    [ClassDataSource<SetupStorageFixture>(Shared = SharedType.PerClass)]
+    [NotInParallel]
+    public sealed class TableAccessIntegrationTests : IDisposable
     {
         private TableAccess<TestEntity> sut;
-        private bool disposedValue = false;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TableAccessIntegrationTests"/> class.
@@ -23,14 +23,11 @@ namespace Gobie74.AzureStorage.Tests
         /// <param name="fixture">A storage fixture.</param>
         public TableAccessIntegrationTests(SetupStorageFixture fixture)
         {
-            if (fixture == null)
-            {
-                throw new ArgumentNullException(nameof(fixture));
-            }
+            ArgumentNullException.ThrowIfNull(fixture);
 
             if (fixture.Table == null)
             {
-                throw new Exception("Fixture's Table property is null, have you set it up correctly?");
+                throw new InvalidOperationException("Fixture's Table property is null, have you set it up correctly?");
             }
 
             this.Fixture = fixture;
@@ -44,187 +41,104 @@ namespace Gobie74.AzureStorage.Tests
         public SetupStorageFixture Fixture { get; }
 
         /// <summary>
-        /// This is a test.
+        /// Can get a single entity by partition and row key.
         /// </summary>
         /// <returns>A task.</returns>
-        [Fact]
+        [Test]
         public async Task CanGetSingleSpecifiedEntity()
         {
             // Act
             TestEntity getIt = await this.sut.GetSingleAsync("test", "query1");
 
             // Assert
-            Assert.NotNull(getIt);
-            Assert.Equal("Findable with get single", getIt.Name);
+            await Assert.That(getIt).IsNotNull();
+            await Assert.That(getIt.Name).IsEqualTo("Findable with get single");
         }
 
         /// <summary>
         /// Should be able to delete an entity without throwing.
         /// </summary>
         /// <returns>A task.</returns>
-        [Fact]
+        [Test]
         public async Task CanDeleteSpecificEntity()
         {
             // Arrange
             TestEntity deletable = await this.sut.GetSingleAsync("test", "delete");
 
-            bool threw = false;
-
-            // Act
-            try
-            {
-                await this.sut.DeleteAsync(deletable);
-            }
-            catch (StorageException)
-            {
-                threw = true;
-            }
-
-            // Assert
-            Assert.False(threw);
+            // Act / Assert
+            await Assert.That(() => this.sut.DeleteAsync(deletable)).ThrowsNothing();
+            await Assert.That(() => this.sut.GetSingleAsync("test", "delete")).Throws<NotFoundException>();
         }
 
         /// <summary>
         /// Can insert an entity.
         /// </summary>
         /// <returns>A task.</returns>
-        [Fact]
+        [Test]
         public async Task CanInsertWithoutThrowing()
         {
             // Arrange
-            TestEntity insertable = new TestEntity { PartitionKey = "test", RowKey = "inserted", Name = "This was inserted" };
-            bool threw = false;
-            TestEntity verify = null;
+            TestEntity insertable = new() { PartitionKey = "test", RowKey = "inserted", Name = "This was inserted" };
 
             // Act
-            try
-            {
-                await this.sut.AddAsync(insertable);
-
-                verify = await this.sut.GetSingleAsync("test", "inserted");
-            }
-            catch (StorageException)
-            {
-                threw = true;
-            }
+            await Assert.That(() => this.sut.AddAsync(insertable)).ThrowsNothing();
+            TestEntity verify = await this.sut.GetSingleAsync("test", "inserted");
 
             // Assert
-            Assert.False(threw);
-            Assert.NotNull(verify);
-            Assert.Equal("This was inserted", verify.Name);
+            await Assert.That(verify).IsNotNull();
+            await Assert.That(verify.Name).IsEqualTo("This was inserted");
         }
 
         /// <summary>
         /// Should be able to find via a property.
         /// </summary>
         /// <returns>A task.</returns>
-        [Fact]
+        [Test]
         public async Task CanFindByProperty()
         {
-            // Arrange
-            string targetProperty = "Name";
-            string targetValue = "Findable with get single";
-            string targetRow = "query1";
-            TestEntity foundItem = null;
-            bool threw = false;
-
             // Act
-            try
-            {
-                foundItem = await this.sut.FindFirstRowWithProperty(targetRow, targetProperty, targetValue);
-            }
-            catch (NotFoundException)
-            {
-                threw = true;
-            }
-            catch (StorageException)
-            {
-                threw = true;
-            }
+            TestEntity foundItem = await this.sut.FindFirstRowWithProperty("query1", "Name", "Findable with get single");
 
             // Assert
-            Assert.False(threw);
-            Assert.NotNull(foundItem);
-            Assert.Equal("test", foundItem.PartitionKey);
+            await Assert.That(foundItem).IsNotNull();
+            await Assert.That(foundItem.PartitionKey).IsEqualTo("test");
         }
 
         /// <summary>
         /// Can get a collection of items.
         /// </summary>
         /// <returns>A task.</returns>
-        [Fact]
+        [Test]
         public async Task CanGetCollectionOfItems()
         {
-            // Arrange
-            IReadOnlyCollection<TestEntity> results = null;
-            bool threw = false;
-
             // Act
-            try
-            {
-                results = await this.sut.FindAllByPartitionKey("list");
-            }
-            catch (StorageException)
-            {
-                threw = true;
-            }
+            IReadOnlyCollection<TestEntity> results = await this.sut.FindAllByPartitionKey("list");
 
             // Assert
-            Assert.False(threw);
-            Assert.NotNull(results);
-            Assert.Equal(3, results.Count);
+            await Assert.That(results).IsNotNull();
+            await Assert.That(results.Count).IsEqualTo(3);
         }
 
         /// <summary>
         /// Can get a collection of items with the same row key.
         /// </summary>
         /// <returns>A task.</returns>
-        [Fact]
+        [Test]
         public async Task CanGetCollectionByRowKey()
         {
-            // Arrange
-            IReadOnlyCollection<TestEntity> results = null;
-            bool threw = false;
-
             // Act
-            try
-            {
-                results = await this.sut.FindAllByRowKey("row");
-            }
-            catch (StorageException)
-            {
-                threw = true;
-            }
+            IReadOnlyCollection<TestEntity> results = await this.sut.FindAllByRowKey("row");
 
             // Assert
-            Assert.False(threw);
-            Assert.NotNull(results);
-            Assert.Equal(2, results.Count);
+            await Assert.That(results).IsNotNull();
+            await Assert.That(results.Count).IsEqualTo(2);
         }
 
         /// <inheritdoc/>
         public void Dispose()
         {
-            this.Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        /// <summary>
-        /// Correctly implements the dispose pattern.
-        /// </summary>
-        /// <param name="disposing">true if disposing.</param>
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!this.disposedValue)
-            {
-                if (disposing)
-                {
-                    this.sut.Dispose();
-                    this.sut = null;
-                }
-
-                this.disposedValue = true;
-            }
+            this.sut?.Dispose();
+            this.sut = null;
         }
     }
 }
