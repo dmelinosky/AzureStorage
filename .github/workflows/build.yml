@@ -67,7 +67,7 @@ jobs:
     environment: nuget
     permissions:
       id-token: write # request an OIDC token for NuGet Trusted Publishing
-      contents: read
+      contents: write # create the version tag and GitHub release
 
     steps:
       - name: Download package
@@ -93,3 +93,30 @@ jobs:
           --api-key ${{ steps.login.outputs.NUGET_API_KEY }}
           --source https://api.nuget.org/v3/index.json
           --skip-duplicate
+
+      - name: Create tag and GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          package=$(ls artifacts/packages/*.nupkg | head -n 1)
+          version=$(basename "$package" .nupkg | sed 's/^Gobie74\.AzureStorage\.//')
+          tag="v$version"
+
+          if gh release view "$tag" >/dev/null 2>&1 || git ls-remote --exit-code --tags "https://github.com/$GH_REPO.git" "refs/tags/$tag" >/dev/null 2>&1; then
+            echo "Release $tag already exists; skipping."
+            exit 0
+          fi
+
+          notes=$(unzip -p "$package" '*.nuspec' | sed -n 's:.*<releaseNotes>\(.*\)</releaseNotes>.*:\1:p')
+
+          prerelease=()
+          if [[ "$version" == *-* ]]; then prerelease=(--prerelease); fi
+
+          gh release create "$tag" "$package" \
+            --target "$GITHUB_SHA" \
+            --title "$tag" \
+            --notes "$notes" \
+            --generate-notes \
+            "${prerelease[@]}"
