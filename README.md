@@ -11,7 +11,11 @@ The data types that this library stores must implement [Azure.Data.Tables.ITable
 
 ### Construction
 
-Once you have a class you want to store, create a `TableAccess<T>` object.  The constructor takes either a connection string and a table name, or an existing `Azure.Data.Tables.TableClient`, plus an optional logger.
+Once you have a class you want to store, create a `TableAccess<T>` object.  The constructor takes one of the following, plus an optional logger:
+
+- a connection string and a table name,
+- an existing `Azure.Data.Tables.TableClient`, or
+- an `Azure.Data.Tables.TableServiceClient` and a table name.
 
 The connection string can be found in the Azure Portal or in Azure Storage Explorer, and possibly other places.
 
@@ -29,6 +33,32 @@ Using dependency injection during ConfigureServices might look something like th
 
                 return new TableAccess<Thing>(connection, "test", logger);
             });
+```
+
+#### Example with Microsoft.Extensions.Azure
+
+If you register Azure clients with `AddAzureClients` from [Microsoft.Extensions.Azure](https://learn.microsoft.com/dotnet/azure/sdk/dependency-injection), pass the registered `TableServiceClient` and a table name. This library doesn't depend on Microsoft.Extensions.Azure itself.
+
+```c#
+            services.AddAzureClients(clients =>
+            {
+                clients.AddTableServiceClient(connection);
+                clients.AddTableServiceClient(otherConnection).WithName("other");
+            });
+
+            // Default client
+            services.AddTransient<ITableAccess<Thing>>(ctx =>
+                new TableAccess<Thing>(
+                    ctx.GetRequiredService<TableServiceClient>(),
+                    "things",
+                    ctx.GetService<ILogger<TableAccess<Thing>>>()));
+
+            // Named client via the factory
+            services.AddTransient<ITableAccess<OtherThing>>(ctx =>
+                new TableAccess<OtherThing>(
+                    ctx.GetRequiredService<IAzureClientFactory<TableServiceClient>>().CreateClient("other"),
+                    "otherthings",
+                    ctx.GetService<ILogger<TableAccess<OtherThing>>>()));
 ```
 
 ### Adding Data

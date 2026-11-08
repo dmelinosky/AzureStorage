@@ -20,12 +20,20 @@ namespace Gobie74.AzureStorage.Tests
     /// </remarks>
     public class SetupStorageFixture : IAsyncInitializer, IAsyncDisposable
     {
-        private const string TableName = "test";
+        /// <summary>
+        /// The name of the seeded test table.
+        /// </summary>
+        public const string TableName = "test";
 
         /// <summary>
         /// Gets the table the fixture is setting up for testing.
         /// </summary>
         public TableClient Table { get; private set; }
+
+        /// <summary>
+        /// Gets the table service client for the storage account under test.
+        /// </summary>
+        public TableServiceClient ServiceClient { get; private set; }
 
         /// <summary>
         /// Called before the fixture is used by any test.
@@ -38,9 +46,9 @@ namespace Gobie74.AzureStorage.Tests
                 .AddEnvironmentVariables()
                 .Build();
 
-            TableServiceClient service = CreateServiceClient(config);
+            this.ServiceClient = CreateServiceClient(config);
 
-            this.Table = service.GetTableClient(TableName);
+            this.Table = this.ServiceClient.GetTableClient(TableName);
 
             await this.Table.DeleteAsync();
             await this.Table.CreateIfNotExistsAsync();
