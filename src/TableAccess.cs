@@ -57,6 +57,18 @@ namespace Gobie74.AzureStorage
         {
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TableAccess{T}"/> class from a <see cref="TableServiceClient"/>,
+        /// such as one registered with <c>AddAzureClients</c> or created by <c>IAzureClientFactory&lt;TableServiceClient&gt;</c>.
+        /// </summary>
+        /// <param name="serviceClient">The table service client for the storage account.</param>
+        /// <param name="tableName">The name of the table to use for storage.</param>
+        /// <param name="logger">An optional logger.</param>
+        public TableAccess(TableServiceClient serviceClient, string tableName, ILogger<TableAccess<T>> logger = null)
+            : this(GetTableClient(serviceClient, tableName), logger)
+        {
+        }
+
         /// <summary> Gets or sets the table to read from. </summary>
         protected internal TableClient TableClient { get; set; }
 
@@ -250,6 +262,14 @@ namespace Gobie74.AzureStorage
             this.LogEnsureTable(this.tableName);
 
             await this.ExecuteAsync(() => this.TableClient.CreateIfNotExistsAsync());
+        }
+
+        private static TableClient GetTableClient(TableServiceClient serviceClient, string tableName)
+        {
+            ArgumentNullException.ThrowIfNull(serviceClient);
+            ArgumentException.ThrowIfNullOrWhiteSpace(tableName);
+
+            return serviceClient.GetTableClient(tableName);
         }
 
         private async Task<IReadOnlyCollection<T>> QueryAllAsync(string filter)

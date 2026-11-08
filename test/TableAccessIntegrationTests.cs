@@ -134,6 +134,83 @@ namespace Gobie74.AzureStorage.Tests
             await Assert.That(results.Count).IsEqualTo(2);
         }
 
+        /// <summary>
+        /// Can read existing entities through an instance created from a <see cref="Azure.Data.Tables.TableServiceClient"/>.
+        /// </summary>
+        /// <returns>A task.</returns>
+        [Test]
+        public async Task CanReadUsingTableServiceClientConstructor()
+        {
+            // Arrange
+            using TableAccess<TestEntity> access = new(this.Fixture.ServiceClient, SetupStorageFixture.TableName);
+
+            // Act
+            TestEntity getIt = await access.GetSingleAsync("test", "query1");
+
+            // Assert
+            await Assert.That(getIt).IsNotNull();
+            await Assert.That(getIt.Name).IsEqualTo("Findable with get single");
+        }
+
+        /// <summary>
+        /// An instance created from a <see cref="Azure.Data.Tables.TableServiceClient"/> creates and uses the named table.
+        /// </summary>
+        /// <returns>A task.</returns>
+        [Test]
+        public async Task TableServiceClientConstructorCreatesNamedTable()
+        {
+            // Arrange
+            string tableName = $"ctor{Guid.NewGuid():N}";
+            TestEntity entity = new() { PartitionKey = "ctor", RowKey = "one", Name = "From service client" };
+
+            try
+            {
+                using TableAccess<TestEntity> access = new(this.Fixture.ServiceClient, tableName);
+
+                // Act
+                await access.AddAsync(entity);
+                TestEntity verify = await access.GetSingleAsync("ctor", "one");
+
+                // Assert
+                await Assert.That(verify.Name).IsEqualTo("From service client");
+                await Assert.That(this.Fixture.ServiceClient.GetTableClient(tableName).Name).IsEqualTo(tableName);
+            }
+            finally
+            {
+                await this.Fixture.ServiceClient.DeleteTableAsync(tableName);
+            }
+        }
+
+        /// <summary>
+        /// The <see cref="Azure.Data.Tables.TableServiceClient"/> constructor rejects a null client.
+        /// </summary>
+        /// <returns>A task.</returns>
+        [Test]
+        public async Task TableServiceClientConstructorRejectsNullClient()
+        {
+            await Assert.That(() =>
+            {
+                using TableAccess<TestEntity> access = new((Azure.Data.Tables.TableServiceClient)null, "anytable");
+            }).Throws<ArgumentNullException>();
+        }
+
+        /// <summary>
+        /// The <see cref="Azure.Data.Tables.TableServiceClient"/> constructor rejects a missing table name.
+        /// </summary>
+        /// <param name="tableName">An invalid table name.</param>
+        /// <returns>A task.</returns>
+        [Test]
+        [Arguments(null)]
+        [Arguments("")]
+        [Arguments("   ")]
+        public async Task TableServiceClientConstructorRejectsMissingTableName(string tableName)
+        {
+            await Assert.That(() =>
+            {
+                using TableAccess<TestEntity> access = new(this.Fixture.ServiceClient, tableName);
+            }).Throws<ArgumentException>();
+        }
+
         /// <inheritdoc/>
         public void Dispose()
         {

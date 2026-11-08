@@ -11,9 +11,9 @@
     <Description>Azure Table Storage helper library</Description>
     <PackageProjectUrl>https://github.com/dmelinosky/AzureStorage</PackageProjectUrl>
     <RepositoryUrl>https://github.com/dmelinosky/AzureStorage</RepositoryUrl>
-    <Version>2.0.0</Version>
+    <Version>2.1.0</Version>
     <Authors>Gobie74</Authors>
-    <PackageReleaseNotes>Breaking: target net10.0 and migrate from the deprecated Microsoft.Azure.Cosmos.Table to Azure.Data.Tables. Entities now implement Azure.Data.Tables.ITableEntity and TableAccess wraps a TableClient.</PackageReleaseNotes>
+    <PackageReleaseNotes>Add a TableAccess constructor that takes a TableServiceClient and a table name, for use with Microsoft.Extensions.Azure (AddAzureClients and IAzureClientFactory).</PackageReleaseNotes>
     <PackageDescription>Azure Table Storage helper library</PackageDescription>
     <PackageTags>Azure;Storage;Table;Gobie74</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
