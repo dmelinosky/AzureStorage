@@ -8,51 +8,41 @@ namespace Gobie74.AzureStorage
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
     using System.Threading.Tasks;
-    using Microsoft.Azure.Cosmos.Table;
+    using Azure;
+    using Azure.Data.Tables;
     using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Logging.Abstractions;
 
     /// <summary>
     /// Generic wrapper for Azure Table access.
     /// </summary>
     /// <typeparam name="T">the type to access from the table.</typeparam>
-    public class TableAccess<T> : IDisposable, ITableAccess<T>
+    public partial class TableAccess<T> : IDisposable, ITableAccess<T>
         where T : class, ITableEntity, new()
     {
         /// <summary> Logging provider. </summary>
         private readonly ILogger<TableAccess<T>> logger;
 
-        /// <summary> To detect redundant calls. </summary>
-        private bool disposedValue = false;
-
-        /// <summary> users table. </summary>
-        private CloudTable cloudTable;
-
-        /// <summary> table client. </summary>
-        private CloudTableClient cloudTableClient;
-
-        /// <summary> storage account. </summary>
-        private CloudStorageAccount cloudStorageAccount;
-
         /// <summary> the table name. </summary>
-        private string tableName;
+        private readonly string tableName;
+
+        /// <summary> To detect redundant calls. </summary>
+        private bool disposedValue;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TableAccess{T}"/> class.
         /// </summary>
         /// <param name="table">the table to access.</param>
         /// <param name="logger">An optional logger.</param>
-        public TableAccess(CloudTable table, ILogger<TableAccess<T>> logger = null)
+        public TableAccess(TableClient table, ILogger<TableAccess<T>> logger = null)
         {
-            if (table == null)
-            {
-                throw new ArgumentNullException(nameof(table));
-            }
+            ArgumentNullException.ThrowIfNull(table);
 
-            this.logger = logger;
+            this.logger = logger ?? NullLogger<TableAccess<T>>.Instance;
 
-            this.logger?.LogTrace("Table access logging is available.");
+            this.LogTrace("Table access logging is available.");
 
-            this.CloudTable = table;
+            this.TableClient = table;
             this.tableName = table.Name;
         }
 
@@ -63,19 +53,12 @@ namespace Gobie74.AzureStorage
         /// <param name="tableName"> table name to use for storage. </param>
         /// <param name="logger">A logger implemenation.</param>
         public TableAccess(string connectionString, string tableName, ILogger<TableAccess<T>> logger = null)
+            : this(new TableClient(connectionString, tableName), logger)
         {
-            this.logger = logger;
-
-            this.logger?.LogTrace("Table access logging is available.");
-
-            this.cloudStorageAccount = CloudStorageAccount.Parse(connectionString);
-            this.cloudTableClient = this.cloudStorageAccount.CreateCloudTableClient();
-            this.CloudTable = this.cloudTableClient.GetTableReference(tableName);
-            this.tableName = tableName;
         }
 
         /// <summary> Gets or sets the table to read from. </summary>
-        protected internal CloudTable CloudTable { get => this.cloudTable; set => this.cloudTable = value; }
+        protected internal TableClient TableClient { get; set; }
 
         /// <summary>
         /// Dispose of managed and unmanaged resources.
@@ -96,28 +79,17 @@ namespace Gobie74.AzureStorage
         {
             if (entity == null)
             {
-                this.logger?.LogWarning("Null value passed as insertion parameter, returning early.");
+                this.LogNullEntity("insertion");
                 return;
             }
 
             await this.CreateIfNotExists();
 
-            this.logger?.LogTrace("Inserting entity");
+            this.LogTrace("Inserting entity");
 
-            TableOperation insertOperation = TableOperation.Insert(entity);
+            Response response = await this.ExecuteAsync(() => this.TableClient.AddEntityAsync(entity));
 
-            TableResult result = await this.CloudTable.ExecuteAsync(insertOperation);
-
-            if (result.HttpStatusCode >= 200 && result.HttpStatusCode < 300)
-            {
-                this.logger?.LogTrace($"Return code is {result.HttpStatusCode}");
-            }
-            else
-            {
-                string message = $"HttpStatusCode returned is {result.HttpStatusCode}";
-                this.logger?.LogError(message);
-                throw new StorageException(message);
-            }
+            this.EnsureSuccess(response.Status);
         }
 
         /// <summary>
@@ -129,7 +101,7 @@ namespace Gobie74.AzureStorage
         /// <exception cref="NotFoundException"> Thrown if the entity is not found. </exception>
         public virtual async Task<T> GetSingleAsync(string partitionKey, string rowKey)
         {
-            this.logger?.LogTrace($"Supplied partition key {partitionKey}, supplied row key {rowKey}.");
+            this.LogKeys(partitionKey, rowKey);
 
             if (string.IsNullOrWhiteSpace(partitionKey) || string.IsNullOrWhiteSpace(rowKey))
             {
@@ -138,17 +110,11 @@ namespace Gobie74.AzureStorage
 
             await this.CreateIfNotExists();
 
-            this.logger?.LogTrace($"Retrieving from table with Partition Key {partitionKey} and row key {rowKey}.");
+            NullableResponse<T> result = await this.ExecuteAsync(() => this.TableClient.GetEntityIfExistsAsync<T>(partitionKey, rowKey));
 
-            TableOperation retrieveOperation = TableOperation.Retrieve<T>(partitionKey, rowKey);
-
-            TableResult retrievedResult = await this.CloudTable.ExecuteAsync(retrieveOperation);
-
-            this.logger?.LogTrace($"TableResult result is not null - {retrievedResult.Result != null}");
-
-            if (retrievedResult.Result != null)
+            if (result.HasValue)
             {
-                return (T)retrievedResult.Result;
+                return result.Value;
             }
 
             throw new NotFoundException(partitionKey, rowKey);
@@ -164,30 +130,19 @@ namespace Gobie74.AzureStorage
         {
             if (entity == null)
             {
-                this.logger?.LogWarning("Null value passed as insert or update parameter, returning early.");
+                this.LogNullEntity("insert or update");
                 return;
             }
 
             await this.CreateIfNotExists();
 
-            TableOperation insertOrReplaceOperation = TableOperation.InsertOrReplace(entity);
+            Response response = await this.ExecuteAsync(() => this.TableClient.UpsertEntityAsync(entity, TableUpdateMode.Replace));
 
-            TableResult result = await this.CloudTable.ExecuteAsync(insertOrReplaceOperation);
-
-            if (result.HttpStatusCode >= 200 && result.HttpStatusCode < 300)
-            {
-                this.logger?.LogTrace($"Return code is {result.HttpStatusCode}");
-            }
-            else
-            {
-                string message = $"HttpStatusCode returned is {result.HttpStatusCode}";
-                this.logger?.LogError(message);
-                throw new StorageException(message);
-            }
+            this.EnsureSuccess(response.Status);
         }
 
         /// <summary>
-        /// Delete an entity.
+        /// Delete an entity. Deleting an entity that does not exist is a no-op.
         /// </summary>
         /// <param name="entity"> the entity to delete. </param>
         /// <returns>A task.</returns>
@@ -196,36 +151,20 @@ namespace Gobie74.AzureStorage
         {
             if (entity == null)
             {
-                this.logger?.LogWarning("Null value passed as delete parameter, returning early.");
+                this.LogNullEntity("delete");
                 return;
             }
 
             await this.CreateIfNotExists();
 
-            TableOperation retrieveOperation = TableOperation.Retrieve<T>(entity.PartitionKey, entity.RowKey);
+            Response response = await this.ExecuteAsync(() => this.TableClient.DeleteEntityAsync(entity.PartitionKey, entity.RowKey, ETag.All));
 
-            TableResult retrieveResult = await this.CloudTable.ExecuteAsync(retrieveOperation);
-
-            T deleteEntity = (T)retrieveResult.Result;
-
-            if (deleteEntity != null)
+            if (response.Status == 404)
             {
-                TableOperation deleteOperation = TableOperation.Delete(deleteEntity);
-
-                TableResult deleteResult = await this.CloudTable.ExecuteAsync(deleteOperation);
-
-                if (deleteResult.HttpStatusCode >= 200 && deleteResult.HttpStatusCode < 300)
-                {
-                    this.logger?.LogTrace($"The returned status was {deleteResult.HttpStatusCode}");
-                    return;
-                }
-                else
-                {
-                    string message = $"Error code {deleteResult.HttpStatusCode}";
-                    this.logger?.LogError(message);
-                    throw new StorageException(message);
-                }
+                return;
             }
+
+            this.EnsureSuccess(response.Status);
         }
 
         /// <summary>
@@ -244,24 +183,15 @@ namespace Gobie74.AzureStorage
 
             await this.CreateIfNotExists();
 
-            var filter = TableQuery.CombineFilters(
-                TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, rowKey),
-                TableOperators.And,
-                TableQuery.GenerateFilterCondition(propertyName, QueryComparisons.Equal, propertyValue));
+            // Property names cannot be parameterized; values are escaped by CreateQueryFilter.
+            string filter = $"{TableClient.CreateQueryFilter($"RowKey eq {rowKey}")} and {propertyName} eq {TableClient.CreateQueryFilter($"{propertyValue}")}";
 
-            TableQuery<T> query = new TableQuery<T>().Where(filter);
-
-            var stuffs = await this.CloudTable.ExecuteQuerySegmentedAsync<T>(query, new TableContinuationToken());
-
-            T found = null;
-
-            foreach (T thing in stuffs.Results)
+            await foreach (T item in this.TableClient.QueryAsync<T>(filter, maxPerPage: 1))
             {
-                found = thing;
-                break;
+                return item;
             }
 
-            return found;
+            return null;
         }
 
         /// <summary>
@@ -273,28 +203,10 @@ namespace Gobie74.AzureStorage
         {
             if (string.IsNullOrWhiteSpace(partitionKey))
             {
-                return new ReadOnlyCollection<T>(new List<T>());
+                return ReadOnlyCollection<T>.Empty;
             }
 
-            await this.CreateIfNotExists();
-
-            string filter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, partitionKey);
-
-            TableQuery<T> query = new TableQuery<T>().Where(filter);
-
-            var continuationToken = default(TableContinuationToken);
-
-            List<T> results = new List<T>();
-
-            do
-            {
-                TableQuerySegment<T> segment = await this.CloudTable.ExecuteQuerySegmentedAsync<T>(query, continuationToken);
-                continuationToken = segment.ContinuationToken;
-                results.AddRange(segment.Results);
-            }
-            while (continuationToken != null);
-
-            return new ReadOnlyCollection<T>(results);
+            return await this.QueryAllAsync(TableClient.CreateQueryFilter($"PartitionKey eq {partitionKey}"));
         }
 
         /// <summary>
@@ -306,28 +218,10 @@ namespace Gobie74.AzureStorage
         {
             if (string.IsNullOrWhiteSpace(rowKey))
             {
-                return new ReadOnlyCollection<T>(new List<T>());
+                return ReadOnlyCollection<T>.Empty;
             }
 
-            await this.CreateIfNotExists();
-
-            string filter = TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, rowKey);
-
-            TableQuery<T> query = new TableQuery<T>().Where(filter);
-
-            var continuationToken = default(TableContinuationToken);
-
-            List<T> results = new List<T>();
-
-            do
-            {
-                TableQuerySegment<T> segment = await this.CloudTable.ExecuteQuerySegmentedAsync<T>(query, continuationToken);
-                continuationToken = segment.ContinuationToken;
-                results.AddRange(segment.Results);
-            }
-            while (continuationToken != null);
-
-            return new ReadOnlyCollection<T>(results);
+            return await this.QueryAllAsync(TableClient.CreateQueryFilter($"RowKey eq {rowKey}"));
         }
 
         /// <summary>
@@ -340,13 +234,9 @@ namespace Gobie74.AzureStorage
             {
                 if (disposing)
                 {
-                    this.CloudTable = null;
-                    this.cloudTableClient = null;
-                    this.cloudStorageAccount = null;
+                    this.TableClient = null;
                 }
 
-                // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
-                // TODO: set large fields to null.
                 this.disposedValue = true;
             }
         }
@@ -357,16 +247,66 @@ namespace Gobie74.AzureStorage
         /// <returns>A task. </returns>
         protected virtual async Task CreateIfNotExists()
         {
-            bool exists = await this.CloudTable.ExistsAsync();
+            this.LogEnsureTable(this.tableName);
 
-            this.logger?.LogTrace($"Table named {this.tableName} exists - {exists}.");
+            await this.ExecuteAsync(() => this.TableClient.CreateIfNotExistsAsync());
+        }
 
-            if (!exists)
+        private async Task<IReadOnlyCollection<T>> QueryAllAsync(string filter)
+        {
+            await this.CreateIfNotExists();
+
+            List<T> results = [];
+
+            await foreach (T item in this.TableClient.QueryAsync<T>(filter))
             {
-                this.logger?.LogTrace($"Creating table {this.tableName}.");
+                results.Add(item);
+            }
 
-                await this.CloudTable.CreateAsync();
+            return results.AsReadOnly();
+        }
+
+        private async Task<TResult> ExecuteAsync<TResult>(Func<Task<TResult>> operation)
+        {
+            try
+            {
+                return await operation();
+            }
+            catch (RequestFailedException ex)
+            {
+                this.LogStatusError(ex.Status);
+                throw new StorageException($"HttpStatusCode returned is {ex.Status}", ex);
             }
         }
+
+        private void EnsureSuccess(int status)
+        {
+            if (status >= 200 && status < 300)
+            {
+                this.LogStatus(status);
+                return;
+            }
+
+            this.LogStatusError(status);
+            throw new StorageException($"HttpStatusCode returned is {status}");
+        }
+
+        [LoggerMessage(Level = LogLevel.Trace, Message = "{Message}")]
+        private partial void LogTrace(string message);
+
+        [LoggerMessage(Level = LogLevel.Warning, Message = "Null value passed as {Operation} parameter, returning early.")]
+        private partial void LogNullEntity(string operation);
+
+        [LoggerMessage(Level = LogLevel.Trace, Message = "Supplied partition key {PartitionKey}, supplied row key {RowKey}.")]
+        private partial void LogKeys(string partitionKey, string rowKey);
+
+        [LoggerMessage(Level = LogLevel.Trace, Message = "Ensuring table {TableName} exists.")]
+        private partial void LogEnsureTable(string tableName);
+
+        [LoggerMessage(Level = LogLevel.Trace, Message = "Return code is {StatusCode}")]
+        private partial void LogStatus(int statusCode);
+
+        [LoggerMessage(Level = LogLevel.Error, Message = "HttpStatusCode returned is {StatusCode}")]
+        private partial void LogStatusError(int statusCode);
     }
 }

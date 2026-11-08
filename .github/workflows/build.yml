@@ -1,0 +1,61 @@
+name: Build
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  BUILD_CONFIGURATION: Release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Start Azurite (table storage emulator)
+        run: >
+          docker run -d --name azurite -p 10002:10002
+          mcr.microsoft.com/azure-storage/azurite
+          azurite-table --tableHost 0.0.0.0 --skipApiVersionCheck
+
+      - name: Restore
+        run: dotnet restore AzureStorage.slnx
+
+      - name: Build
+        run: dotnet build AzureStorage.slnx -c $BUILD_CONFIGURATION --no-restore -p:ContinuousIntegrationBuild=true
+
+      - name: Test
+        env:
+          StorageConnectionString: UseDevelopmentStorage=true
+        run: >
+          dotnet test --solution AzureStorage.slnx -c $BUILD_CONFIGURATION --no-build
+          --report-trx --results-directory ${{ github.workspace }}/artifacts/TestResults
+
+      - name: Pack
+        run: dotnet pack src/Gobie74.AzureStorage.csproj -c $BUILD_CONFIGURATION --no-build -o ${{ github.workspace }}/artifacts/packages
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: drop
+          path: artifacts/
+          if-no-files-found: warn

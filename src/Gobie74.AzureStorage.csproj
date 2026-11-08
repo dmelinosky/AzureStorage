@@ -1,8 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup Label="Build">
-    <TargetFramework>netstandard2.0</TargetFramework>
-    <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(MSBuildProjectName).xml</DocumentationFile>
     <RootNamespace>Gobie74.AzureStorage</RootNamespace>
   </PropertyGroup>
 
@@ -11,38 +9,24 @@
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Description>Azure Table Storage helper library</Description>
-    <PackageProjectUrl>https://github.com/dmelinosky/AzureStorage</PackageProjectUrl>  
-    <Version>1.0.6</Version>
+    <PackageProjectUrl>https://github.com/dmelinosky/AzureStorage</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/dmelinosky/AzureStorage</RepositoryUrl>
+    <Version>2.0.0</Version>
     <Authors>Gobie74</Authors>
-    <PackageReleaseNotes>Add a search by partition and row keys.</PackageReleaseNotes>
+    <PackageReleaseNotes>Breaking: target net10.0 and migrate from the deprecated Microsoft.Azure.Cosmos.Table to Azure.Data.Tables. Entities now implement Azure.Data.Tables.ITableEntity and TableAccess wraps a TableClient.</PackageReleaseNotes>
     <PackageDescription>Azure Table Storage helper library</PackageDescription>
     <PackageTags>Azure;Storage;Table;Gobie74</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
-  
+
   <ItemGroup>
-    <PackageReference Include="Microsoft.Azure.Cosmos.Table" Version="1.0.6" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.1" />
-
-    <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="2.9.8">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-
-    <PackageReference Include="StyleCop.Analyzers" Version="1.1.118">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-
+    <PackageReference Include="Azure.Data.Tables" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
-  
+
   <ItemGroup>
-    <None Include="..\.editorconfig" Link=".editorconfig" />
-    <AdditionalFiles Include="..\.stylecop.json" />
-  </ItemGroup>    
-    
+    <None Include="..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
 </Project>

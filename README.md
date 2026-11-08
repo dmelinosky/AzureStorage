@@ -3,11 +3,15 @@ The purpose of this library was to make storing data in Azure Table Storage just
 
 ## Using
 
-The data types that this library stores must be derived from [Microsoft.Azure.Cosmos.Table.ITableEntity](https://docs.microsoft.com/en-us/azure/cosmos-db/tutorial-develop-table-dotnet#define-the-entity).
+The library targets .NET 10 and is built on [Azure.Data.Tables](https://learn.microsoft.com/dotnet/api/overview/azure/data.tables-readme).
+
+The data types that this library stores must implement [Azure.Data.Tables.ITableEntity](https://learn.microsoft.com/dotnet/api/azure.data.tables.itableentity).
+
+> **Upgrading from 1.x:** version 2.0 replaces the deprecated `Microsoft.Azure.Cosmos.Table` package. Entities now implement `Azure.Data.Tables.ITableEntity` (which adds `Timestamp` and `ETag` properties), and the constructor that took a `CloudTable` now takes a `TableClient`.
 
 ### Construction
 
-Once you have a class you want to store, create a `TableAccess<T>` object.  Currently the constructor takes a connection string, a table name, and optionally a logger interface.
+Once you have a class you want to store, create a `TableAccess<T>` object.  The constructor takes either a connection string and a table name, or an existing `Azure.Data.Tables.TableClient`, plus an optional logger.
 
 The connection string can be found in the Azure Portal or in Azure Storage Explorer, and possibly other places.
 
@@ -63,7 +67,7 @@ To delete an entity from the table, call the `DeleteAsync` method.
 
 ### Query Data
 
-Currently the library supports querying data by the PartitionKey and RowKey only.  Query by property is in development.
+The library supports `GetSingleAsync` (partition key + row key), `FindAllByPartitionKey`, `FindAllByRowKey`, and `FindFirstRowWithProperty` (row key + a property name/value).
 
 To Query for an entity, supply the partition key and row key to the `GetSingleAsync` method.
 
@@ -75,7 +79,24 @@ To Query for an entity, supply the partition key and row key to the `GetSingleAs
 
 ---
 
+## Building and testing
+
+```sh
+dotnet build AzureStorage.slnx
+dotnet test --solution AzureStorage.slnx
+```
+
+The tests are integration tests written with [TUnit](https://tunit.dev). They use, in order of preference, a `StorageConnectionString` setting, `AccountName` + `AccountKey` user secrets, or the local [Azurite](https://learn.microsoft.com/azure/storage/common/storage-use-azurite) emulator:
+
+```sh
+docker run -p 10002:10002 mcr.microsoft.com/azure-storage/azurite azurite-table --tableHost 0.0.0.0
+```
+
+---
+
 ## Status
+
+[![Build](https://github.com/dmelinosky/AzureStorage/actions/workflows/build.yml/badge.svg)](https://github.com/dmelinosky/AzureStorage/actions/workflows/build.yml)
 
 [![Build status](https://dev.azure.com/gobie74/github/_apis/build/status/dmelinosky.AzureStorage)](https://dev.azure.com/gobie74/github/_build/latest?definitionId=15)
 
